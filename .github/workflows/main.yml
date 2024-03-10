@@ -27,6 +27,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build Project
+        run: mvn clean install -DskipTests
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
