@@ -1,60 +1,81 @@
-name: Deploy to AWS ECS
+name: terraform-automation
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+
+env:
+  AWS_REGION: "us-east-1"
+  IMAGE_TAG: "latest"
+  ECR_REPOSITORY: "tf-automation-repo"
+  TASK_DEFINITON: task-definition.json
+  TASK_DEFINITION_FAMILY: "app-td"
+  CONTAINER_NAME: "app"
+  SERVICE: "app-ecs-service"
+  CLUSTER: "app-cluster"
+
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  build-and-deploy:
-    runs-on: [ ubuntu-latest ]
+  terraform:
+    name: terraform
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Build Project
-        run: mvn clean install -DskipTests
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: 'us-east-1'
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: Login to Amazon Ecr
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: 'true'
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: build, tag and push the image to Amazon Ecr
         id: build-image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-          REPOSITORY: test-springboot
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry}}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
-          # Build a docker container and
-          # push it to ECR so that it can
-          # be deployed to ECS.
-          docker build -t $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG
-          echo "image=$ECR_REGISTRY/$REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-      - name: Fill in the new image ID in the Amazon ECS task definition
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: Apply terraform
+        run: terraform init && terraform apply --auto-approve
+        working-directory: terraform
+
+      - name: Export task definition
+        id: export-td
+        env:
+          TD_NAME: ${{ env.TASK_DEFINITON }}
+          TD_FAMILY: ${{ env.TASK_DEFINITION_FAMILY}}
+        run: |
+          rm -rf $TD_NAME
+          aws ecs describe-task-definition --task-definition $TD_FAMILY --query taskDefinition > $TD_NAME
+
+      - name: Check exported Task Definition
+        run: |
+          ls
+
+      - name: Update the image in the task definition
         id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        uses: aws-actions/amazon-ecs-render-task-definition/@v1
         with:
-          task-definition: springboot-app-task-definition.json
-          container-name: springboot-example
+          task-definition: ${{ env.TASK_DEFINITON }}
+          container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ steps.build-image.outputs.image }}
-      - name: Deploy Amazon ECS task definition
+
+      - name: Deploy task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: springboot-example-service
-          cluster: Cluster1
-          wait-for-service-stability: true
+          task-definition: ${{ env.TASK_DEFINITON }}
+          service: ${{ env.SERVICE}}
+          cluster: ${{ env.CLUSTER}}
