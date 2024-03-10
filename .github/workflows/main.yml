@@ -47,6 +47,10 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Apply terraform
+        run: terraform init && terraform apply --auto-approve
+        working-directory: terraform
+
       - name: build, tag and push the image to Amazon Ecr
         id: build-image
         env:
@@ -57,9 +61,6 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-      - name: Apply terraform
-        run: terraform init && terraform apply --auto-approve
-        working-directory: terraform
 
       - name: Export task definition
         id: export-td
