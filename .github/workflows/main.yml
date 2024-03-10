@@ -47,9 +47,9 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Apply terraform
-        run: terraform init && terraform destroy && terraform apply --auto-approve
-        working-directory: terraform
+#      - name: Apply terraform
+#        run: terraform init && terraform destroy && terraform apply --auto-approve
+#        working-directory: terraform
 
       - name: build, tag and push the image to Amazon Ecr
         id: build-image
