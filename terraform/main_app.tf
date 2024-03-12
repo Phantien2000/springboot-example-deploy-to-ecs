@@ -75,3 +75,31 @@ resource "aws_iam_role_policy_attachment" "attach" {
   role       = aws_iam_role.ecsTaskExecutionRole.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
+
+#resource "aws_appautoscaling_target" "ecs-target" {
+#  max_capacity       = 5
+#  min_capacity       = 1
+#  resource_id        = "service/${aws_ecs_cluster.app-ecs.id}/${aws_ecs_service.app-ecs-service.name}"
+#  scalable_dimension = "ecs:service:DesiredCount"
+#  service_namespace = "ecs"
+#}
+#
+#resource "aws_appautoscaling_policy" "ecs-policy" {
+#  name               = "ecs-autoscaling-policy"
+#  policy_type        = "TargetTrackingScaling"
+#  resource_id        = aws_appautoscaling_target.ecs-target.resource_id
+#  scalable_dimension = aws_appautoscaling_target.ecs-target.scalable_dimension
+#  service_namespace = aws_appautoscaling_target.ecs-target.service_namespace
+#
+#  target_tracking_scaling_policy_configuration {
+#    predefined_metric_specification {
+#      predefined_metric_type = "ECSServiceAverageCPUUtilization"
+#    }
+#    target_value = 50
+#  }
+#}
+#
+#resource "aws_appautoscaling_policy_attachment" "ecs-attach" {
+#  policy_arn = aws_appautoscaling_policy.ecs-policy.arn
+#  target_arn = aws_appautoscaling_target.ecs-target.arn
+#}
