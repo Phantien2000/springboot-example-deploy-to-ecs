@@ -47,9 +47,9 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: Apply terraform
-#        run: terraform init && terraform destroy && terraform apply --auto-approve
-#        working-directory: terraform
+      - name: Apply terraform
+        run: terraform init && terraform destroy && terraform apply --auto-approve
+        working-directory: terraform
 
       - name: build, tag and push the image to Amazon Ecr
         id: build-image
@@ -62,30 +62,30 @@ jobs:
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
 
-      - name: Export task definition
-        id: export-td
-        env:
-          TD_NAME: ${{ env.TASK_DEFINITON }}
-          TD_FAMILY: ${{ env.TASK_DEFINITION_FAMILY}}
-        run: |
-          rm -rf $TD_NAME
-          aws ecs describe-task-definition --task-definition $TD_FAMILY --query taskDefinition > $TD_NAME
-
-      - name: Check exported Task Definition
-        run: |
-          ls
-
-      - name: Update the image in the task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition/@v1
-        with:
-          task-definition: ${{ env.TASK_DEFINITON }}
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
-
-      - name: Deploy task definition
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ env.TASK_DEFINITON }}
-          service: ${{ env.SERVICE}}
-          cluster: ${{ env.CLUSTER}}
+#      - name: Export task definition
+#        id: export-td
+#        env:
+#          TD_NAME: ${{ env.TASK_DEFINITON }}
+#          TD_FAMILY: ${{ env.TASK_DEFINITION_FAMILY}}
+#        run: |
+#          rm -rf $TD_NAME
+#          aws ecs describe-task-definition --task-definition $TD_FAMILY --query taskDefinition > $TD_NAME
+#
+#      - name: Check exported Task Definition
+#        run: |
+#          ls
+#
+#      - name: Update the image in the task definition
+#        id: task-def
+#        uses: aws-actions/amazon-ecs-render-task-definition/@v1
+#        with:
+#          task-definition: ${{ env.TASK_DEFINITON }}
+#          container-name: ${{ env.CONTAINER_NAME }}
+#          image: ${{ steps.build-image.outputs.image }}
+#
+#      - name: Deploy task definition
+#        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+#        with:
+#          task-definition: ${{ env.TASK_DEFINITON }}
+#          service: ${{ env.SERVICE}}
+#          cluster: ${{ env.CLUSTER}}
